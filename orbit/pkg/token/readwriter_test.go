@@ -172,6 +172,14 @@ func TestRotator(t *testing.T) {
 	// Do it again to prove that closing multiple times is safe.
 	stop1()
 
+	// Wait for the remote check before expiring the token again. The remote
+	// check is due at the same moment as the next local check, and select picks
+	// at random between ready channels, so an expired token at that point can be
+	// rotated before the remote check runs.
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&numRemoteChecks) >= 1
+	}, 5*time.Second, 10*time.Millisecond)
+
 	// Set the token's mtime to more than an hour ago again.
 	rw.mu.Lock()
 	rw.mtime = time.Now().Add(-2 * time.Hour)
